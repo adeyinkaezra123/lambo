@@ -7,7 +7,7 @@ import { EXR_FILE, EXR_PATH } from "./config";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader";
 
 //Whether to show fps counter or not
-const IS_DEBUG = true;
+const IS_DEBUG = false;
 
 //Scene background color
 const SCENE_COLOR = 0x000000;
