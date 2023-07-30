@@ -1,12 +1,7 @@
+import $ from 'jquery';
+
 //Configurator Palette HTML Layout
-
-function createElements(html) {
-  let parser = new DOMParser();
-  let doc = parser.parseFromString(html, "text/html");
-  return doc.body.childNodes[0];
-}
-
-const PALETTE_HTML = createElements(`<div class="config-palette">
+const PALETTE_HTML = $(`<div class="config-palette">
 
         <div class="config-palette__wrapper">
 
@@ -74,181 +69,165 @@ const PALETTE_HTML = createElements(`<div class="config-palette">
      </div>`);
 
 //Singleton Interface Pattern
-
 export const Interface = (() => {
-  //Meta data local reference
-  let metaData = {};
-  //Current Body Color
-  let cBodyColor;
-  //Current MirrorCover Color
-  let cOVRMColor;
 
-  //Callback - Entity Color Change
-  let cbOnEntityColor = (target, color) => void 0;
-  //Callback  - Entity Visibility Change
-  let cbOnEntityVisible = (target) => void 0;
+    //Meta data local reference
+    let metaData = {};
+    //Current Body Color
+    let cBodyColor;
+    //Current MirrorCover Color
+    let cOVRMColor;
 
-  //Method - Append texture swatches for selected container
-  const appendTextureSwatches = (container, config, cb) => {
-    //Empty the container
-    container.innerHTML = "";
+    //Callback - Entity Color Change
+    let cbOnEntityColor = (target, color) => void 0;
+    //Callback  - Entity Visibility Change
+    let cbOnEntityVisible = (target) => void 0;
 
-    //Iterate through each available design
-    config.designs.forEach((design) => {
-      //Compose thum image url from meta
-      const url = `assets/aventador/${design.thumb}.png`;
-      //Compose the swatch element
-      const swatch = createElements(
-        `<li><button class="texture-swatch"><span>${design.name}</span></button></li>`
-      );
+    //Method - Append texture swatches for selected container
+    const appendTextureSwatches = (container, config, cb) => {
 
-      //Apply image as button background
-      swatch.querySelector("button").style.backgroundImage = `url(${url})`;
-      swatch.querySelector("button").addEventListener("click", (e) => {
-        return () => cb(design.value);
-      }); //Bind click callback for swatch
+        //Empty the container
+        $(container).empty();
 
-      //Add the texture swatch to target container
-      container.append(swatch);
-    });
-  };
+        //Iterate through each available design
+        config.designs.forEach(design => {
 
-  //Method - Append color swatches for selected container
-  const appendColorSwatches = (container, config, def, cb) => {
-    //Empty the container
-    container.innerHTML = "";
+            //Compose thum image url from meta
+            const url = `assets/aventador/${design.thumb}.png`;
+            //Compose the swatch element
+            const swatch = $(`<li><button class="texture-swatch"><span>${design.name}</span></button></li>`)
+            //Apply image as button background
+            $('button', swatch).css({ 'background-image': 'url(' + url + ')' });
+            //Bind click callback for swatch
+            $('button', swatch).on('click', ((e) => { return () => cb(e) })(design.value));
+            //Add the texture swatch to target container
+            $(container.append(swatch));
+        })
 
-    //Get the color array
-    var colorList = config.colors.slice(0);
+    }
 
-    //If default color available
-    if (def) colorList.unshift({ name: "Current", value: def });
+    //Method - Append color swatches for selected container
+    const appendColorSwatches = (container, config, def, cb) => {
 
-    //Iterate through each available colors
-    colorList.forEach((color) => {
-      //Compose the swatch element
-      const swatch = createElements(
-        `<li><button class="color-swatch"><span>${color.name}</span></button></li>`
-      );
-      //Set the swatch color
-      swatch.querySelector("button").style.background = color.value;
+        //Empty the container
+        $(container).empty();
 
-      //Bind click callback for swatch
-      swatch.querySelector("button").addEventListener(
-        "click",
+        //Get the color array
+        var colorList = config.colors.slice(0);
 
-        () => {
-          cb(config.target, color.value);
+        //If default color available
+        if (def)
+            colorList.unshift({ "name": "Current", "value": def });
+
+        //Iterate through each available colors
+        colorList.forEach(color => {
+
+            //Compose the swatch element
+            const swatch = $(`<li><button class="color-swatch"><span>${color.name}</span></button></li>`)
+            //Set the swatch color
+            $('button', swatch).css({ "background": color.value });
+            //Bind click callback for swatch
+            $('button', swatch).on('click', ((e, c) => { return () => cb(e, c) })(config.target, color.value));
+
+            //Add the color swatch to target container
+            $(container).append(swatch);
+        })
+    }
+
+    //Event - Configuration Tab Clicked
+    const onConfigTabClicked = (item) => {
+
+        //Get the target tab
+        const target = $(item.currentTarget)
+        //Get target tab Id
+        const tabId = target.data('id');
+
+        //If the palette is already active
+        if (target.hasClass("active")) {
+
+            //Empty the container
+            $(`#${tabId} > ul`, PALETTE_HTML).empty();
+            //Remove active and return
+            return target.removeClass('active');
         }
-      );
 
-      //Add the color swatch to target container
-      container.append(swatch);
-    });
-  };
+        //Deactivate all config tab links
+        $('.config-tab', PALETTE_HTML).removeClass('active');
+        //Hide all config tab contents
+        $('.config-options', PALETTE_HTML).hide();
 
-  //Event - Configuration Tab Clicked
-  const onConfigTabClicked = (item) => {
-    //Get the target tab
-    const target = item.currentTarget;
-    //Get target tab Id
-    const tabId = target.getAttribute("data-id");
 
-    //If the palette is already active
-    if (target.classList.contains("active")) {
-      //Empty the container
-      PALETTE_HTML.querySelector(`#${tabId} > ul`).innerHTML = "";
-      //Remove active and return
-      return target.classList.remove("active");
-    }
+        //Get the target container for swatches
+        const container = $(`#${tabId} > ul`, PALETTE_HTML);
 
-    //Deactivate all config tab links
-    PALETTE_HTML.querySelectorAll(".config-tab").forEach((configTab) =>
-      configTab.classList.remove("active")
-    );
-    //Hide all config tab contents
-    PALETTE_HTML.querySelectorAll(".config-options").forEach(
-      (configOption) => (configOption.style.display = "none")
-    );
+        //Add object/texture swatch if wheel design
+        if (tabId == 'wheel_designs') {
+            appendTextureSwatches(container, metaData[tabId], (target) => {
 
-    //Get the target container for swatches
-    const container = PALETTE_HTML.querySelector(`#${tabId} > ul`);
+                //Return if callback not hooked
+                if (!cbOnEntityVisible) return;
 
-    //Add object/texture swatch if wheel design
-    if (tabId == "wheel_designs") {
-      appendTextureSwatches(container, metaData[tabId], (target) => {
-        //Return if callback not hooked
-        if (!cbOnEntityVisible) return;
+                //Invoke callback
+                cbOnEntityVisible(target);
 
-        //Invoke callback
-        cbOnEntityVisible(target);
-      });
-    }
-    //Add the color swatches
-    else {
-      appendColorSwatches(
-        container,
-        metaData[tabId],
-        tabId === "mirror_colors" ? cBodyColor : null,
-        (target, color) => {
-          //Return if callback not hooked
-          if (!cbOnEntityColor) return;
-
-          //Invoke callback (For target)
-          cbOnEntityColor(target, color);
-
-          //Cache OVRM color if target
-          if (target == "Mt_MirrorCover") cOVRMColor = color;
-
-          //If Body color is target
-          if (target == "Mt_Body") {
-            //Cache new body color
-            cBodyColor = color;
-
-            //If OVRM color is not custom, apply body color to OVRM also
-            if (
-              metaData.mirror_colors.colors.filter(
-                (e) => e.value === cOVRMColor
-              ).length === 0
-            )
-              cbOnEntityColor("Mt_MirrorCover", color);
-          }
+            })
         }
-      );
+        //Add the color swatches
+        else {
+            appendColorSwatches(container, metaData[tabId], (tabId === 'mirror_colors') ? cBodyColor : null, (target, color) => {
+
+                //Return if callback not hooked
+                if (!cbOnEntityColor) return;
+
+                //Invoke callback (For target)
+                cbOnEntityColor(target, color);
+
+                //Cache OVRM color if target
+                if (target == 'Mt_MirrorCover') cOVRMColor = color;
+
+                //If Body color is target
+                if (target == 'Mt_Body') {
+
+                    //Cache new body color
+                    cBodyColor = color;
+
+                    //If OVRM color is not custom, apply body color to OVRM also
+                    if (metaData.mirror_colors.colors.filter(e => e.value === cOVRMColor).length === 0)
+                        cbOnEntityColor('Mt_MirrorCover', color);
+                }
+            })
+        }
+
+        //Set the current clicked tab active
+        $(`.config-tab[data-id=${tabId}]`, PALETTE_HTML).addClass("active");
+        //Show the active config palette content
+        $(`#${tabId}`, PALETTE_HTML).show();
     }
 
-    //Set the current clicked tab active
-    PALETTE_HTML.querySelector(`.config-tab[data-id=${tabId}]`).classList.add(
-      "active"
-    );
-    //Show the active config palette content
-    PALETTE_HTML.querySelector(`#${tabId}`).style.display = "block";
-  };
+    //Method - Initialize Interface
+    const initialize = (meta) => {
 
-  //Method - Initialize Interface
-  const initialize = (meta) => {
-    //Cache meta data
-    metaData = meta;
+        //Cache meta data
+        metaData = meta;
 
-    //Cache default body color
-    cBodyColor = meta.body_colors.colors[meta.body_colors.default].value;
-    //Cache default OVRM color
-    cOVRMColor = meta.mirror_colors.colors[meta.mirror_colors.default].value;
+        //Cache default body color
+        cBodyColor = meta.body_colors.colors[meta.body_colors.default].value;
+        //Cache default OVRM color
+        cOVRMColor = meta.mirror_colors.colors[meta.mirror_colors.default].value;
 
-    //Append the Configurator palette to body
-    document.querySelector("body").append(PALETTE_HTML);
+        //Append the Configurator palette to body
+        $('body').append(PALETTE_HTML);
 
-    //Bind Event - Tab item clicked
-    document
-      .querySelectorAll(".config-tab")
-      .forEach((tab) => tab.addEventListener("click", onConfigTabClicked));
-  };
+        //Bind Event - Tab item clicked
+        $('.config-tab', PALETTE_HTML).on('click', onConfigTabClicked);
+    }
 
-  //Set Callback - Entity Color Change
-  const setOnEntityColor = (cb) => (cbOnEntityColor = cb);
-  //Set Callback - Entity Visibility Change
-  const setOnEntityVisible = (cb) => (cbOnEntityVisible = cb);
+    //Set Callback - Entity Color Change
+    const setOnEntityColor = (cb) => cbOnEntityColor = cb;
+    //Set Callback - Entity Visibility Change
+    const setOnEntityVisible = (cb) => cbOnEntityVisible = cb;
 
-  //Return Public Methods/Properties
-  return { initialize, setOnEntityColor, setOnEntityVisible };
+    //Return Public Methods/Properties
+    return { initialize, setOnEntityColor, setOnEntityVisible }
+
 })();
